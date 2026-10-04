@@ -222,7 +222,7 @@ func (sd *StreamDeck) read(ctx context.Context) {
 			continue
 		}
 
-		debug("read data:", data)
+		debug("read data: %v", data)
 
 		events, err := myState.Update(sd.Config, data)
 		if err != nil {
@@ -308,6 +308,17 @@ func (sd *StreamDeck) encodeImage(img image.Image) ([]byte, error) {
 		img = newImage
 	}
 
+	if sd.Config.TransposeImage {
+		// Anti-diagonal transpose; composes with encodeBMP's top-down right-to-left pixel walk.
+		newImage := image.NewRGBA(img.Bounds())
+		for x := 0; x < sd.Config.ButtonSize; x++ {
+			for y := 0; y < sd.Config.ButtonSize; y++ {
+				newImage.Set(x, y, img.At(sd.Config.ButtonSize-1-y, sd.Config.ButtonSize-1-x))
+			}
+		}
+		img = newImage
+	}
+
 	// the original Stream Deck only supports BMP
 	if sd.Config.ImageFormat == "bmp" {
 		return encodeBMP(sd.Config, img)
@@ -372,7 +383,10 @@ func (sd *StreamDeck) FillImage(btnIndex int, img image.Image) error {
 	sd.buttonImages[btnIndex] = img
 
 	if sd.Config.ImageFormat == "bmp" {
-		splitPoint := 7803
+		if sd.Config.MiniProtocol {
+			return sd.sendMiniImageInLock(btnIndex, imgBuf)
+		}
+		splitPoint := len(imgBuf) / 2
 		err := sd.sendOriginalSingleMsgInLock(btnIndex, 1, imgBuf[0:splitPoint])
 		if err != nil {
 			return err
@@ -421,6 +435,43 @@ func (sd *StreamDeck) FillImage(btnIndex int, img image.Image) error {
 
 	}
 
+	return nil
+}
+
+func (sd *StreamDeck) sendMiniImageInLock(btnIndex int, imgBuf []byte) error {
+	const reportLength = 1024
+	const headerLength = 16
+	payloadLength := reportLength - headerLength
+
+	bytesRemaining := len(imgBuf)
+	pos := 0
+	pageNumber := byte(0)
+
+	for bytesRemaining > 0 {
+		chunk := min(bytesRemaining, payloadLength)
+		buf := make([]byte, reportLength)
+		buf[0] = 0x02
+		buf[1] = 0x01
+		buf[2] = pageNumber
+		buf[3] = 0
+		if chunk == bytesRemaining {
+			buf[4] = 1
+		}
+		buf[5] = byte(btnIndex + 1)
+		copy(buf[headerLength:], imgBuf[pos:pos+chunk])
+
+		n, err := sd.device.Write(buf)
+		if err != nil {
+			return err
+		}
+		if n != len(buf) {
+			return fmt.Errorf("only wrote %d of %d", n, len(buf))
+		}
+
+		bytesRemaining -= chunk
+		pos += chunk
+		pageNumber++
+	}
 	return nil
 }
 
