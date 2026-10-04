@@ -59,6 +59,10 @@ func (s *State) Update(c *Config, b []byte) ([]Event, error) {
 		return s.updateKeyPressOriginal(b[1:])
 	}
 
+	if c != nil && c.SimpleKeyEvents {
+		return s.updateKeyPress(b[1:])
+	}
+
 	switch b[1] {
 	case 0:
 		return s.updateKeyPress(b[4:])
