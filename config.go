@@ -12,7 +12,10 @@ type Config struct {
 	ButtonSize       int
 	ImageFormat      string
 	ImageRotate      bool
+	TransposeImage   bool
 	ConvertKey       bool
+	SimpleKeyEvents  bool
+	MiniProtocol     bool
 }
 
 func (c Config) NumButtons() int {
@@ -78,7 +81,19 @@ var Plus = Config{
 	ImageFormat:      "jpg",
 }
 
-var AllConfigs = []Config{Original, OriginalMk1, Original2, Plus}
+var Mini = Config{
+	ProductID:        0x0063,
+	NumButtonColumns: 3,
+	NumButtonRows:    2,
+	Spacer:           26,
+	ButtonSize:       80,
+	ImageFormat:      "bmp",
+	TransposeImage:   true,
+	SimpleKeyEvents:  true,
+	MiniProtocol:     true,
+}
+
+var AllConfigs = []Config{Original, OriginalMk1, Original2, Plus, Mini}
 
 func FindConnectedConfig() (Config, bool) {
 	for _, c := range AllConfigs {
