@@ -179,7 +179,9 @@ func (sd *StreamDeck) read(ctx context.Context) {
 	var lastReconnectionErrTime time.Time
 
 	for ctx.Err() == nil {
-		data := make([]byte, 24)
+		// Sized for the XL (36-byte key report: 4-byte header + 32 key states).
+		// hid_read returns the actual report length, so smaller decks are unaffected.
+		data := make([]byte, 128)
 		_, err := sd.device.Read(data)
 		// note: when device has been closed, err will be "hid: device closed"
 		if err != nil {
