@@ -93,7 +93,17 @@ var Mini = Config{
 	MiniProtocol:     true,
 }
 
-var AllConfigs = []Config{Original, OriginalMk1, Original2, Plus, Mini}
+var XL = Config{
+	ProductID:        0x008f,
+	NumButtonColumns: 8,
+	NumButtonRows:    4,
+	Spacer:           38,
+	ButtonSize:       96,
+	ImageFormat:      "jpg",
+	ImageRotate:      true,
+}
+
+var AllConfigs = []Config{Original, OriginalMk1, Original2, Plus, Mini, XL}
 
 func FindConnectedConfig() (Config, bool) {
 	for _, c := range AllConfigs {
